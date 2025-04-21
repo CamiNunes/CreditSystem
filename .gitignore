@@ -1,0 +1,67 @@
+# Ignora arquivos de configuração local
+*.user
+*.suo
+*.userprefs
+
+# Ignora arquivos de build e binários
+[Bb]in/
+[Oo]bj/
+*.exe
+*.dll
+*.pdb
+*.cache
+*.ilk
+*.nupkg
+
+# Ignora diretórios de pacotes NuGet
+packages/
+[Nn]u[Gg]et/
+*.nupkg
+
+# Ignora arquivos de log e temporários
+*.log
+*.tmp
+*.temp
+
+# Ignora arquivos de configuração específicos do Visual Studio
+.vs/
+.vscode/
+.idea/
+
+# Ignora arquivos de projeto específicos do Visual Studio
+*.csproj.user
+*.vbproj.user
+
+# Ignora arquivos de resharper
+_ReSharper.*
+*.ReSharper
+
+# Ignora arquivos de teste
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# Ignora arquivos de cobertura de código
+*.coverage
+*.coveragexml
+
+# Ignora arquivos de banco de dados local
+*.mdf
+*.ldf
+
+# Ignora arquivos de publish
+publish/
+
+# Ignora arquivos de cache do Visual Studio
+.vs/
+.vscode/
+.ionide/
+
+# Ignora arquivos de configuração local do .NET
+launchSettings.json
+
+# Ignora arquivos de cache do Rider
+.idea/
+*.sln.iml
+
+# Ignora arquivos de cache do Visual Studio Code
+.vscode/

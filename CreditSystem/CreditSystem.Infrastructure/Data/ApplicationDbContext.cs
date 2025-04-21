@@ -1,6 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Reflection.Emit;
+﻿using CreditSystem.Domain;
+using Microsoft.EntityFrameworkCore;
 
 namespace CreditSystem.Infrastructure.Data;
 

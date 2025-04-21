@@ -1,40 +1,60 @@
 ﻿using CreditSystem.Application.Interfaces;
-using Microsoft.EntityFrameworkCore.Metadata;
+using CreditSystem.Contracts.Messages;
+using Microsoft.Extensions.Hosting;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-using System;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace CreditSystem.Infrastructure.Messaging;
 
-public class CreditRequestConsumer : IDisposable
+// Alterar para herdar de BackgroundService e implementar IDisposable
+public class CreditRequestConsumer : BackgroundService, IDisposable
 {
     private readonly IConnection _connection;
     private readonly IModel _channel;
     private readonly ICreditService _creditService;
-    private readonly string _queueName = "credit-requests-queue";
+    private const string ExchangeName = "credit-exchange";
+    private const string QueueName = "credit-requests-queue";
 
     public CreditRequestConsumer(string hostname, ICreditService creditService)
     {
         _creditService = creditService ?? throw new ArgumentNullException(nameof(creditService));
 
-        var factory = new ConnectionFactory() { HostName = hostname };
+        var factory = new ConnectionFactory()
+        {
+            HostName = hostname,
+            DispatchConsumersAsync = true
+        };
+
         _connection = factory.CreateConnection();
         _channel = _connection.CreateModel();
 
-        _channel.ExchangeDeclare(exchange: "credit-exchange", type: ExchangeType.Fanout);
-        _channel.QueueDeclare(queue: _queueName,
-                            durable: true,  // Alterado para true para persistência
-                            exclusive: false,
-                            autoDelete: false,
-                            arguments: null);
-        _channel.QueueBind(queue: _queueName,
-                         exchange: "credit-exchange",
-                         routingKey: "credit-requests");
+        _channel.ExchangeDeclare(
+            exchange: ExchangeName,
+            type: ExchangeType.Fanout,
+            durable: true);
 
-        var consumer = new EventingBasicConsumer(_channel);
+        _channel.QueueDeclare(
+            queue: QueueName,
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: null);
+
+        _channel.QueueBind(
+            queue: QueueName,
+            exchange: ExchangeName,
+            routingKey: string.Empty);
+    }
+
+    // Implementar o método ExecuteAsync obrigatório do BackgroundService
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        stoppingToken.ThrowIfCancellationRequested();
+
+        var consumer = new AsyncEventingBasicConsumer(_channel);
+
         consumer.Received += async (model, ea) =>
         {
             try
@@ -50,20 +70,22 @@ public class CreditRequestConsumer : IDisposable
             }
             catch (Exception ex)
             {
-                // Em produção, considere usar ILogger em vez de Console
-                Console.WriteLine($"Error processing message: {ex.Message}");
+                Console.WriteLine($"[ERRO] Processamento da mensagem: {ex.Message}");
             }
         };
 
-        _channel.BasicConsume(queue: _queueName, autoAck: true, consumer: consumer);
+        _channel.BasicConsume(
+            queue: QueueName,
+            autoAck: true,
+            consumer: consumer);
+
+        return Task.CompletedTask;
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
-        _channel?.Dispose();
-        _connection?.Dispose();
-        GC.SuppressFinalize(this);
+        _channel?.Close();
+        _connection?.Close();
+        base.Dispose();
     }
 }
-
-public record CreditRequestMessage(int RequestId, string ApplicantEmail, decimal Amount);

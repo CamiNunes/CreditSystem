@@ -27,12 +27,11 @@ public class CreditService : ICreditService
         await _repository.AddAsync(creditRequest);
 
         // Princípio SOLID: Open/Closed - Podemos adicionar novos comportamentos sem modificar esta classe
-        await _messagingService.PublishMessageAsync("credit-requests", new
-        {
-            RequestId = creditRequest.Id,
-            ApplicantEmail = creditRequest.ApplicantEmail,
-            Amount = creditRequest.RequestedAmount
-        });
+        await _messagingService.PublishMessageAsync("credit-requests", new CreditRequestMessage(
+            RequestId: creditRequest.Id,
+            ApplicantEmail: creditRequest.ApplicantEmail,
+            Amount: creditRequest.RequestedAmount
+        ));
 
         return creditRequest;
     }

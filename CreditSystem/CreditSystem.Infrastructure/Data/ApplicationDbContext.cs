@@ -6,10 +6,19 @@ namespace CreditSystem.Infrastructure.Data;
 // Princípio SOLID: Single Responsibility - Responsável apenas pelo acesso ao banco de dados
 public class ApplicationDbContext : DbContext
 {
+    // Construtor para runtime (DI)
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
+
     }
+
+    // Construtor sem parâmetros para migrations (OBRIGATÓRIO)
+    public ApplicationDbContext()
+        : base(new DbContextOptionsBuilder<ApplicationDbContext>().Options)
+    {
+    }
+
     public DbSet<CreditRequest> CreditRequests { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

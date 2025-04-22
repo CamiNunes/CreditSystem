@@ -35,13 +35,18 @@ builder.Services.AddScoped<ICreditScoreProvider, MockCreditScoreProvider>();
 
 // Configuração do RabbitMQ
 builder.Services.AddSingleton<IMessagingService>(provider =>
-    new RabbitMQService(builder.Configuration["RabbitMQ:Hostname"]));
+    new RabbitMQService(
+        hostname: builder.Configuration["RabbitMQ:Hostname"]!,
+        logger: provider.GetRequiredService<ILogger<RabbitMQService>>()
+    )
+);
 
 // Registrar o consumidor como um hosted service
-builder.Services.AddHostedService(provider =>
-    new CreditRequestConsumer(
-        builder.Configuration["RabbitMQ:Hostname"],
-        provider.GetRequiredService<ICreditService>()));
+//builder.Services.AddHostedService(provider =>
+//    new CreditRequestConsumer(
+//        builder.Configuration["RabbitMQ:Hostname"],
+//        provider.GetRequiredService<ICreditService>()));
+builder.Services.AddHostedService<CreditRequestConsumer>();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -49,19 +54,26 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configure CORS
+app.UseCors(policy =>
+    policy.AllowAnyOrigin()
+          .AllowAnyMethod()
+          .AllowAnyHeader());
+
+/// Configure o Swagger UI para desenvolvimento
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
+        //options.RoutePrefix = string.Empty; // Coloca o Swagger na raiz
+        //options.ConfigObject.DisplayRequestDuration = true;
+    });
 }
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
-
-// Adicione no final do Program.cs, antes de app.Run():
-
-
 
 app.Run();

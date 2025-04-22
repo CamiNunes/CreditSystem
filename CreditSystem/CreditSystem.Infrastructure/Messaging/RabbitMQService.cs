@@ -1,41 +1,82 @@
 ﻿using CreditSystem.Application.Interfaces;
+using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using System.Text;
 using System.Text.Json;
 
 namespace CreditSystem.Infrastructure.Messaging;
 
-// Princípio SOLID: Interface Segregation - Implementa apenas IMessagingService
-public class RabbitMQService : IMessagingService
+public class RabbitMQService : IMessagingService, IDisposable
 {
     private readonly IConnection _connection;
     private readonly IModel _channel;
-    private readonly string _exchangeName = "credit-exchange";
+    private readonly ILogger<RabbitMQService> _logger;
+    private const string ExchangeName = "credit-exchange";
 
-    public RabbitMQService(string hostname)
+    public RabbitMQService(string hostname, ILogger<RabbitMQService> logger)
     {
-        var factory = new ConnectionFactory() { HostName = hostname };
-        _connection = factory.CreateConnection();
-        _channel = _connection.CreateModel();
+        _logger = logger;
 
-        _channel.ExchangeDeclare(exchange: _exchangeName, type: ExchangeType.Fanout);
+        var factory = new ConnectionFactory()
+        {
+            HostName = hostname,
+            Port = 5672, // Porta explícita
+            UserName = "admin", // Credenciais padrão
+            Password = "admin123",
+            VirtualHost = "/",
+            RequestedConnectionTimeout = TimeSpan.FromSeconds(10) // Timeout reduzido
+        };
+
+        try
+        {
+            _logger.LogInformation("Tentando conectar ao RabbitMQ em {Host}:{Port}", hostname, 5672);
+            _connection = factory.CreateConnection();
+            _channel = _connection.CreateModel();
+            _channel.ExchangeDeclare(ExchangeName, ExchangeType.Fanout, durable: true);
+            _logger.LogInformation("Conexão com RabbitMQ estabelecida com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogCritical(ex, "Falha na conexão com RabbitMQ");
+            throw;
+        }
     }
 
-    public async Task PublishMessageAsync(string routingKey, object message)
+    public Task PublishMessageAsync(string routingKey, object message)
     {
-        var json = JsonSerializer.Serialize(message);
-        var body = Encoding.UTF8.GetBytes(json);
+        try
+        {
+            var json = JsonSerializer.Serialize(message);
+            var body = Encoding.UTF8.GetBytes(json);
 
-        _channel.BasicPublish(
-            exchange: _exchangeName,
-            routingKey: routingKey,
-            basicProperties: null,
-            body: body);
+            _channel.BasicPublish(
+                exchange: ExchangeName,
+                routingKey: routingKey,
+                basicProperties: null,
+                body: body
+            );
+
+            return Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao publicar mensagem");
+            throw;
+        }
     }
 
     public void Dispose()
     {
-        _channel.Close();
-        _connection.Close();
+        try
+        {
+            _channel?.Close();
+            _connection?.Close();
+            _channel?.Dispose();
+            _connection?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao liberar recursos");
+        }
     }
 }

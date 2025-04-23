@@ -20,6 +20,7 @@ public class ApplicationDbContext : DbContext
     }
 
     public DbSet<CreditRequest> CreditRequests { get; set; }
+    public DbSet<User> Users { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

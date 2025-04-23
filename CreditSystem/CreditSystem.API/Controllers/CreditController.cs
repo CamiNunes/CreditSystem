@@ -1,9 +1,11 @@
 ﻿using CreditSystem.Application.Interfaces;
 using CreditSystem.Contracts.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CreditSystem.API.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class CreditController : ControllerBase

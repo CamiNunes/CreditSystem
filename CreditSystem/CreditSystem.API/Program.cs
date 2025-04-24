@@ -11,11 +11,65 @@ using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.AspNetCore.Mvc;
+using CreditSystem.API.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+
+// Configuração de Autenticação JWT (mantenha apenas esta seção)
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    // Configuração dos eventos (OnChallenge/OnForbidden)
+    options.Events = new JwtBearerEvents
+    {
+        OnChallenge = async context =>
+        {
+            context.HandleResponse();
+            var problem = new ProblemDetails
+            {
+                Status = 401,
+                Title = "Não autenticado",
+                Detail = "Token inválido ou ausente"
+            };
+            context.Response.ContentType = "application/problem+json";
+            context.Response.StatusCode = 401;
+            await context.Response.WriteAsJsonAsync(problem);
+        },
+        OnForbidden = async context =>
+        {
+            var problem = new ProblemDetails
+            {
+                Status = 403,
+                Title = "Acesso proibido",
+                Detail = "Você não tem permissão para este recurso"
+            };
+            context.Response.ContentType = "application/problem+json";
+            context.Response.StatusCode = 403;
+            await context.Response.WriteAsJsonAsync(problem);
+        }
+    };
+
+    // Configuração do TokenValidationParameters
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["JwtSettings:ValidIssuer"],
+        ValidAudience = builder.Configuration["JwtSettings:ValidAudience"],
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]!))
+    };
+});
 
 // Configuração do banco de dados
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -94,28 +148,9 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Configuração de Autenticação JWT (ANTES do AddAuthorization)
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["JwtSettings:ValidIssuer"],
-        ValidAudience = builder.Configuration["JwtSettings:ValidAudience"],
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]!))
-    };
-});
-
 var app = builder.Build();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 // Configure CORS
 app.UseCors(policy =>

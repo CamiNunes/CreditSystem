@@ -10,8 +10,8 @@ services:
       - "5001:5001"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=CreditSystemDB;User Id=sa;Password=YourStrong!Password;TrustServerCertificate=true;MultipleActiveResultSets=true
-      - RabbitMQ__Hostname=rabbitmq
+      - ConnectionStrings__DefaultConnection=Data Source=127.0.0.1;User ID=sa;Password=YourStrong!Password;Encrypt=False     
+      - RabbitMQ__Hostname=localhost
       - RabbitMQ__Port=5672
       - RabbitMQ__Username=admin
       - RabbitMQ__Password=admin123

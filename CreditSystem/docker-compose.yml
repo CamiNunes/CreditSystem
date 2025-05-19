@@ -10,14 +10,23 @@ services:
       - "5001:5001"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Data Source=127.0.0.1;User ID=sa;Password=YourStrong!Password;Encrypt=False     
-      - RabbitMQ__Hostname=localhost
+      - ConnectionStrings__DefaultConnection=Data Source=sqlserver;User ID=sa;Password=YourStrong!Password;Encrypt=False     
+      - RabbitMQ__Hostname=rabbitmq
       - RabbitMQ__Port=5672
       - RabbitMQ__Username=admin
       - RabbitMQ__Password=admin123
     depends_on:
       - sqlserver
       - rabbitmq
+    command: >
+        sh -c "
+          echo 'Waiting for RabbitMQ...';
+          until nc -z rabbitmq 5672; do
+            sleep 2;
+          done;
+          echo 'RabbitMQ is up - starting app';
+          dotnet CreditSystem.API.dll
+        "      
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -39,7 +48,7 @@ services:
     environment:
       - RABBITMQ_DEFAULT_USER=admin
       - RABBITMQ_DEFAULT_PASS=admin123
-      - RABBITMQ_DEFAULT_VHOST=/
+      - RABBITMQ_DEFAULT_VHOST=rabbitmq
 
 volumes:
   sqlserver-data:

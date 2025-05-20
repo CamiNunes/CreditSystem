@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  credit-system-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Data Source=sqlserver;User ID=sa;Password=YourStrong!Password;Encrypt=False     
+      - RabbitMQ__Hostname=rabbitmq
+      - RabbitMQ__Port=5672
+      - RabbitMQ__Username=admin
+      - RabbitMQ__Password=admin123
+    depends_on:
+      - sqlserver
+      - rabbitmq
+    command: >
+        sh -c "
+          echo 'Waiting for RabbitMQ...';
+          until nc -z rabbitmq 5672; do
+            sleep 2;
+          done;
+          echo 'RabbitMQ is up - starting app';
+          dotnet CreditSystem.API.dll
+        "      
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong!Password
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672" # Management UI
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin123
+      - RABBITMQ_DEFAULT_VHOST=rabbitmq
+
+volumes:
+  sqlserver-data:

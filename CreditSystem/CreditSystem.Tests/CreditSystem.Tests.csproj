@@ -22,7 +22,6 @@
   <ItemGroup>
     <ProjectReference Include="..\CreditSystem.Application\CreditSystem.Application.csproj" />
     <ProjectReference Include="..\CreditSystem.Domain\CreditSystem.Domain.csproj" />
-    <ProjectReference Include="..\CreditSystem.Infrastructure\CreditSystem.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

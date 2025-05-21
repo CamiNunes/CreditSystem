@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CreditSystem.Contracts\CreditSystem.Contracts.csproj" />
     <ProjectReference Include="..\CreditSystem.Domain\CreditSystem.Domain.csproj" />
   </ItemGroup>
 

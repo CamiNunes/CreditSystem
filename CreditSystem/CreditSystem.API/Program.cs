@@ -1,3 +1,5 @@
+ï»¿using CreditSystem.API.Extensions;
+using CreditSystem.API.Middlewares;
 using CreditSystem.Application.Interfaces;
 using CreditSystem.Application.Services;
 using CreditSystem.Domain;
@@ -5,24 +7,20 @@ using CreditSystem.Infrastructure.Data;
 using CreditSystem.Infrastructure.Messaging;
 using CreditSystem.Infrastructure.Repositories;
 using CreditSystem.Infrastructure.Services;
+using Keycloak.AuthServices.Authentication;
+using Keycloak.AuthServices.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using Microsoft.AspNetCore.Mvc;
-using CreditSystem.API.Middlewares;
-using CreditSystem.API.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
 
-builder.Services.AddCustomAuthentication(builder.Configuration);
+//builder.Services.AddCustomAuthentication(builder.Configuration);
 
-// Configuração do banco de dados
+// ConfiguraÃ§Ã£o do banco de dados
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -39,7 +37,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     });
 });
 
-// Registro de serviços
+// Registro de serviÃ§os
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ICreditService, CreditService>();
@@ -47,7 +45,7 @@ builder.Services.AddScoped<ICreditScoreProvider, MockCreditScoreProvider>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-// Configuração do RabbitMQ
+// ConfiguraÃ§Ã£o do RabbitMQ
 builder.Services.AddSingleton<IMessagingService>(provider =>
     new RabbitMQService(
         hostname: builder.Configuration["RabbitMQ:Hostname"]!,
@@ -65,23 +63,30 @@ builder.Services.AddHostedService<CreditRequestConsumer>();
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 
-// ... outras configurações
+// ... outras configuraÃ§Ãµes
 
+//builder.Services.AddKeycloakAuthentication(builder.Configuration);
+builder.Services
+    .AddKeycloakAuthentication(builder.Configuration, options =>
+    {
+        options.RequireHttpsMetadata = false; // para ambiente de desenvolvimento
+    });
+
+builder.Services.AddKeycloakAuthorization(builder.Configuration);
+
+
+// Swagger com autenticaÃ§Ã£o
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Credit System API", Version = "v1" });
-
-    // Configuração do esquema de segurança JWT
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Description = "JWT Authorization header usando o esquema Bearer. Exemplo: \"Authorization: Bearer {token}\"",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer",
-        BearerFormat = "JWT"
+        Scheme = "Bearer"
     });
-
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {

@@ -33,39 +33,39 @@ public class CreditRequestConsumer : BackgroundService, IDisposable
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await InitializeRabbitMQ();
+        //await InitializeRabbitMQ();
 
-        var consumer = new AsyncEventingBasicConsumer(_channel);
+        //var consumer = new AsyncEventingBasicConsumer(_channel);
 
-        consumer.Received += async (model, ea) =>
-        {
-            try
-            {
-                using var scope = _scopeFactory.CreateScope();
-                var creditService = scope.ServiceProvider.GetRequiredService<ICreditService>();
+        //consumer.Received += async (model, ea) =>
+        //{
+        //    try
+        //    {
+        //        using var scope = _scopeFactory.CreateScope();
+        //        var creditService = scope.ServiceProvider.GetRequiredService<ICreditService>();
 
-                var body = ea.Body.ToArray();
-                var message = Encoding.UTF8.GetString(body);
-                var request = JsonSerializer.Deserialize<CreditRequestMessage>(message);
+        //        var body = ea.Body.ToArray();
+        //        var message = Encoding.UTF8.GetString(body);
+        //        var request = JsonSerializer.Deserialize<CreditRequestMessage>(message);
 
-                if (request != null)
-                {
-                    _logger.LogInformation("Processing credit request: {RequestId}", request.RequestId);
-                    await creditService.EvaluateCreditRequestAsync(request.RequestId);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing message");
-            }
-        };
+        //        if (request != null)
+        //        {
+        //            _logger.LogInformation("Processing credit request: {RequestId}", request.RequestId);
+        //            await creditService.EvaluateCreditRequestAsync(request.RequestId);
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error processing message");
+        //    }
+        //};
 
-        _channel.BasicConsume(
-            queue: QueueName,
-            autoAck: true,
-            consumer: consumer);
+        //_channel.BasicConsume(
+        //    queue: QueueName,
+        //    autoAck: true,
+        //    consumer: consumer);
 
-        _logger.LogInformation("Credit Request Consumer started");
+        //_logger.LogInformation("Credit Request Consumer started");
     }
 
     private async Task InitializeRabbitMQ()

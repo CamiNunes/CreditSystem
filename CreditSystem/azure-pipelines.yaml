@@ -1,0 +1,92 @@
+trigger: none
+  #branches:
+    #include:
+      #- main
+      #- develop
+      #- '*'
+
+variables:
+  - group: CreditSystem-Variables-Group
+
+stages:
+# BUILD STAGE
+- stage: Build
+  displayName: "Build API"
+  jobs:
+  - job: BuildJob
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '8.x'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Build'
+      inputs:
+        command: 'build'
+        projects: '**/*.csproj'
+        arguments: '--configuration Release'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Publish'
+      inputs:
+        command: 'publish'
+        projects: '**/*.csproj'
+        arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)'
+
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)'
+        artifact: 'drop'
+
+# 🚀 DEPLOY DEV
+- stage: Deploy_DEV
+  displayName: "Deploy to DEV"
+  dependsOn: Build
+  variables:
+    ConnectionString: $(ConnectionString_DEV)
+  jobs:
+  - deployment: DeployWebApp
+    environment: dev
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifact: drop
+              path: $(Pipeline.Workspace)
+
+          - task: ExtractFiles@1
+            displayName: "Extract CreditSystem.API.zip"
+            inputs:
+              archiveFilePatterns: '$(Pipeline.Workspace)/drop/CreditSystem.API.zip'
+              destinationFolder: '$(Pipeline.Workspace)/unzipped'
+              cleanDestinationFolder: true
+          - task: replacetokens@5
+            displayName: "Replace Tokens in appsettings.json"
+            inputs:
+              rootDirectory: '$(Pipeline.Workspace)/unzipped'
+              targetFiles: '**/appsettings.json'
+              tokenPrefix: '#{'
+              tokenSuffix: '}#'
+
+          - task: ArchiveFiles@2
+            displayName: "Re-zip CreditSystem.API with credentials"
+            inputs:
+              rootFolderOrFile: '$(Pipeline.Workspace)/unzipped'
+              includeRootFolder: false
+              archiveFile: '$(Pipeline.Workspace)/drop/CreditSystem.API.zip'
+              replaceExistingArchive: true              
+
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: 'svc_creditsystem_dev'
+              appType: 'webAppLinux'
+              appName: '<app>'
+              package: '$(Pipeline.Workspace)/unzipped'
+
